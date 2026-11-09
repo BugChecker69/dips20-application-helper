@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DIPS 2.0 申請支援アシスタント</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      background-color: #2563eb;
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-12">
+
+  <!-- ヘッダー -->
+  <header class="bg-slate-800 text-white py-4 px-6 shadow-md border-b-4 border-blue-600">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      <div>
+        <h1 class="text-xl font-bold flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane text-blue-400"></i>
+          DIPS 2.0 飛行許可・承認申請支援アシスタント
+        </h1>
+        <p class="text-xs text-slate-300 mt-1">新規包括・期間更新（再申請）・個別申請対応</p>
+      </div>
+      <button id="btn-copy-all" class="bg-blue-600 hover:bg-blue-500 text-white text-sm px-4 py-2 rounded shadow transition flex items-center gap-2">
+        <i class="fa-solid fa-copy"></i> 全項目一括コピー（控え用）
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto mt-6 px-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- 左カラム：設定・パラメータ入力パネル -->
+    <section class="lg:col-span-5 bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-col gap-5">
+      <div class="border-b pb-3">
+        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-blue-600"></i> 申請パラメータ設定
+        </h2>
+      </div>
+
+      <!-- 申請種別切替 -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">申請種別</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <label class="flex items-center justify-start p-2.5 border rounded-md cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50">
+            <input type="radio" name="apply-type" value="renew" class="sr-only" checked>
+            <div>
+              <span class="text-sm font-semibold text-slate-800 block">期間更新・再申請</span>
+              <span class="text-[11px] text-slate-500">前回の包括申請の期間満了に伴う更新</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-start p-2.5 border rounded-md cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50">
+            <input type="radio" name="apply-type" value="comprehensive_new" class="sr-only">
+            <div>
+              <span class="text-sm font-semibold text-slate-800 block">新規包括申請</span>
+              <span class="text-[11px] text-slate-500">1年間・日本全国の新規取得</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-start p-2.5 border rounded-md cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50">
+            <input type="radio" name="apply-type" value="modify" class="sr-only">
+            <div>
+              <span class="text-sm font-semibold text-slate-800 block">変更申請</span>
+              <span class="text-[11px] text-slate-500">機体追加・操縦者追加等</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-start p-2.5 border rounded-md cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50">
+            <input type="radio" name="apply-type" value="individual" class="sr-only">
+            <div>
+              <span class="text-sm font-semibold text-slate-800 block">個別申請</span>
+              <span class="text-[11px] text-slate-500">特定の日時・飛行場所（地図必須）</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- 包括申請用：期間指定（カレンダー） -->
+      <div id="comprehensive-date-field" class="space-y-1">
+        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">飛行開始予定日（1年間）</label>
+        <input type="date" id="param-start-date" class="w-full border border-slate-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+        <p class="text-[11px] text-slate-500">※申請日から最低10開庁日（約2〜3週間）以降の日付を指定してください。</p>
+      </div>
+
+      <!-- 前回許可情報入力枠（再申請・変更申請時に表示） -->
+      <div id="previous-permit-fields" class="space-y-3 p-3 bg-amber-50/60 border border-amber-200 rounded-md">
+        <div class="flex items-center gap-1.5 text-xs font-bold text-amber-800">
+          <i class="fa-solid fa-clock-rotate-left"></i> 前回許可情報（再申請・更新用）
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1">前回 許可書番号</label>
+          <input type="text" id="param-prev-number" placeholder="例：東空運第XXXX号 / 国空航第XXXX号" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 bg-white">
+        </div>
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-600 mb-1">直近1年間の事故・トラブル有無</label>
+          <select id="param-accident-status" class="w-full border border-slate-300 rounded px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 bg-white">
+            <option value="none">無事故・無違反・インシデントなし</option>
+            <option value="reported">報告済みのインシデントあり（審査要領準拠対応済）</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 個別申請用フィールド（個別申請選択時に展開） -->
+      <div id="individual-fields" class="space-y-3 pt-3 border-t hidden">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">飛行予定場所（住所・対象物名称）</label>
+          <input type="text" id="param-location" placeholder="例：東京都〇〇区〇〇先 / △△建設敷地内" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">飛行開始日時</label>
+            <input type="datetime-local" id="param-indiv-start" class="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">飛行終了日時</label>
+            <input type="datetime-local" id="param-indiv-end" class="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">予備日（終了日）</label>
+          <input type="date" id="param-indiv-spare" class="w-full border border-slate-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+        </div>
+      </div>
+
+      <!-- 飛行目的 -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">飛行の目的</label>
+        <select id="param-purpose" class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="空撮">空撮（写真・動画撮影）</option>
+          <option value="点検">施設・インフラ点検</option>
+          <option value="測量">測量・進捗管理</option>
+          <option value="農林水産業">農林水産業（散布・育成確認）</option>
+          <option value="自然観測・研究">自然観測・研究開発</option>
+          <option value="事故・災害対応">事故・災害対応訓練</option>
+          <option value="その他">その他（業務全般）</option>
+        </select>
+      </div>
+
+      <!-- 飛行形態（該当要件） -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">申請対象の飛行形態（複数選択可）</label>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <label class="flex items-center gap-2 border p-2 rounded cursor-pointer hover:bg-slate-50">
+            <input type="checkbox" id="check-did" class="rounded text-blue-600 focus:ring-0" checked> 人口集中地区 (DID)
+          </label>
+          <label class="flex items-center gap-2 border p-2 rounded cursor-pointer hover:bg-slate-50">
+            <input type="checkbox" id="check-distance" class="rounded text-blue-600 focus:ring-0" checked> 人・物件30m未満
+          </label>
+          <label class="flex items-center gap-2 border p-2 rounded cursor-pointer hover:bg-slate-50">
+            <input type="checkbox" id="check-night" class="rounded text-blue-600 focus:ring-0" checked> 夜間飛行
+          </label>
+          <label class="flex items-center gap-2 border p-2 rounded cursor-pointer hover:bg-slate-50">
+            <input type="checkbox" id="check-line-of-sight" class="rounded text-blue-600 focus:ring-0" checked> 目視外飛行
+          </label>
+        </div>
+      </div>
+
+      <!-- 安全確保体制・立入管理措置 -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">立入管理措置・安全基準</label>
+        <div class="space-y-2 text-sm">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="check-helper" class="rounded text-blue-600 focus:ring-0" checked> 補助者配置（目視外・夜間等の周囲監視および立入制限）
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="check-exclusion" class="rounded text-blue-600 focus:ring-0" checked> パイロン・コーン・立入禁止看板等による排他区画の明示
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="check-failsafe" class="rounded text-blue-600 focus:ring-0" checked> 電波遮断時・異常時の自動帰還（RTH）機能
+          </label>
+          <label class="flex items-center gap-2">
+            <input type="checkbox" id="check-guards" class="rounded text-blue-600 focus:ring-0" checked> プロペラガード装着（または衝突回避装置）
+          </label>
+        </div>
+      </div>
+
+      <!-- 風速中断基準 & 操縦者実績 -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">風速中断基準</label>
+          <input type="text" id="param-wind-limit" value="5m/s" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">操縦実績時間（目安）</label>
+          <input type="text" id="param-flight-hours" value="10時間以上" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+
+      <!-- 緊急連絡先 -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">事故時等 緊急連絡先</label>
+        <input type="text" id="param-contact" placeholder="例：090-XXXX-XXXX（担当：〇〇）" class="w-full border border-slate-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+    </section>
+
+    <!-- 右カラム：DIPS 2.0 入力ナビゲーション & 自動生成文面 -->
+    <section class="lg:col-span-7 flex flex-col gap-4">
+
+      <!-- ステップ1 -->
+      <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between border-b pb-2 mb-3">
+          <div class="flex items-center font-bold text-slate-800 text-sm">
+            <span class="step-badge">1</span> DIPS 申請作成方法・地図提出要否
+          </div>
+          <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">画面：申請概要入力</span>
+        </div>
+        <div class="text-xs text-slate-600 space-y-2" id="guide-step1-body">
+          <!-- 動的ガイド -->
+        </div>
+      </div>
+
+      <!-- ステップ2 -->
+      <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between border-b pb-2 mb-2">
+          <div class="flex items-center font-bold text-slate-800 text-sm">
+            <span class="step-badge">2</span> 飛行の目的・理由（自由記述枠）
+          </div>
+          <button class="btn-copy text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded transition border flex items-center gap-1" data-target="text-step2">
+            <i class="fa-regular fa-copy"></i> コピー
+          </button>
+        </div>
+        <p class="text-xs text-slate-500 mb-2">配置先：DIPS「飛行の目的・理由」自由記述欄</p>
+        <textarea id="text-step2" rows="4" readonly class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs font-mono text-slate-700 focus:outline-none"></textarea>
+      </div>
+
+      <!-- ステップ3 -->
+      <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between border-b pb-2 mb-2">
+          <div class="flex items-center font-bold text-slate-800 text-sm">
+            <span class="step-badge">3</span> 安全を確保するために講じる体制（自由記述枠）
+          </div>
+          <button class="btn-copy text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded transition border flex items-center gap-1" data-target="text-step3">
+            <i class="fa-regular fa-copy"></i> コピー
+          </button>
+        </div>
+        <p class="text-xs text-slate-500 mb-2">配置先：DIPS「安全を確保するために講じる体制」「その他の安全確保体制」欄</p>
+        <textarea id="text-step3" rows="7" readonly class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs font-mono text-slate-700 focus:outline-none"></textarea>
+      </div>
+
+      <!-- ステップ4 -->
+      <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between border-b pb-2 mb-3">
+          <div class="flex items-center font-bold text-slate-800 text-sm">
+            <span class="step-badge">4</span> 飛行マニュアル選択指針
+          </div>
+          <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono">画面：安全確保体制</span>
+        </div>
+        <div class="text-xs text-slate-600 space-y-2">
+          <div class="p-2.5 bg-blue-50 border border-blue-100 rounded text-blue-900" id="manual-recommendation"></div>
+          <p class="text-[11px] text-slate-500 leading-relaxed">
+            ※更新時であっても、前回の許可書受領後に航空局標準マニュアルの改訂があった場合は、最新版マニュアルの条項（補助者配置基準、風速基準等）に準拠する必要があります。
+          </p>
+        </div>
+      </div>
+
+      <!-- ステップ5 -->
+      <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+        <div class="flex items-center justify-between border-b pb-2 mb-2">
+          <div class="flex items-center font-bold text-slate-800 text-sm">
+            <span class="step-badge">5</span> 緊急連絡体制・インシデント対応文言
+          </div>
+          <button class="btn-copy text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded transition border flex items-center gap-1" data-target="text-step5">
+            <i class="fa-regular fa-copy"></i> コピー
+          </button>
+        </div>
+        <p class="text-xs text-slate-500 mb-2">配置先：DIPS「緊急連絡体制」「特記事項」欄</p>
+        <textarea id="text-step5" rows="4" readonly class="w-full bg-slate-50 border border-slate-200 rounded p-2 text-xs font-mono text-slate-700 focus:outline-none"></textarea>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- コピー通知トースト -->
+  <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs px-4 py-2 rounded shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+    <i class="fa-solid fa-check text-green-400"></i>
+    <span id="toast-text">クリップボードにコピーしました</span>
+  </div>
+
+  <script>
+    // DOM要素参照
+    const applyTypeRadios = document.querySelectorAll('input[name="apply-type"]');
+    const purposeSelect = document.getElementById('param-purpose');
+    const checkDid = document.getElementById('check-did');
+    const checkDistance = document.getElementById('check-distance');
+    const checkNight = document.getElementById('check-night');
+    const checkLineOfSight = document.getElementById('check-line-of-sight');
+    
+    // 安全対策チェックボックス
+    const checkHelper = document.getElementById('check-helper');
+    const checkExclusion = document.getElementById('check-exclusion');
+    const checkFailsafe = document.getElementById('check-failsafe');
+    const checkGuards = document.getElementById('check-guards');
+
+    const windLimitInput = document.getElementById('param-wind-limit');
+    const flightHoursInput = document.getElementById('param-flight-hours');
+    const contactInput = document.getElementById('param-contact');
+
+    // 日時・個別申請用要素
+    const startDateInput = document.getElementById('param-start-date');
+    const comprehensiveDateField = document.getElementById('comprehensive-date-field');
+    const individualFields = document.getElementById('individual-fields');
+    const prevPermitFields = document.getElementById('previous-permit-fields');
+    const locationInput = document.getElementById('param-location');
+    const indivStartInput = document.getElementById('param-indiv-start');
+    const indivEndInput = document.getElementById('param-indiv-end');
+    const indivSpareInput = document.getElementById('param-indiv-spare');
+    const prevNumberInput = document.getElementById('param-prev-number');
+    const accidentStatusSelect = document.getElementById('param-accident-status');
+
+    // 出力枠
+    const guideStep1Body = document.getElementById('guide-step1-body');
+    const textStep2 = document.getElementById('text-step2');
+    const textStep3 = document.getElementById('text-step3');
+    const textStep5 = document.getElementById('text-step5');
+    const manualRecommendation = document.getElementById('manual-recommendation');
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toast-text');
+
+    // デフォルト日付セット（2週間後）
+    const today = new Date();
+    const defaultStart = new Date(today);
+    defaultStart.setDate(today.getDate() + 14);
+    startDateInput.value = defaultStart.toISOString().split('T')[0];
+
+    function showToast(message) {
+      toastText.textContent = message;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 2000);
+    }
+
+    async function copyToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('クリップボードにコピーしました');
+          return;
+        } catch (err) {}
+      }
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('クリップボードにコピーしました');
+      } catch (err) {
+        showToast('コピーに失敗しました');
+      }
+      document.body.removeChild(textArea);
+    }
+
+    function calculateEndDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      d.setFullYear(d.getFullYear() + 1);
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().split('T')[0];
+    }
+
+    function updateOutputs() {
+      const applyType = document.querySelector('input[name="apply-type"]:checked').value;
+      const purpose = purposeSelect.value;
+      const windLimit = windLimitInput.value.trim() || '5m/s';
+      const hours = flightHoursInput.value.trim() || '10時間以上';
+      const contact = contactInput.value.trim() || '緊急連絡先（申請者）';
+      const location = locationInput.value.trim() || '指定飛行場所';
+      const prevNum = prevNumberInput.value.trim() || '前回許可番号（未入力時は手動追記）';
+      const accidentStatus = accidentStatusSelect.value;
+
+      const startDateVal = startDateInput.value;
+      const endDateVal = calculateEndDate(startDateVal);
+
+      const indivStart = indivStartInput.value ? indivStartInput.value.replace('T', ' ') : '未設定';
+      const indivEnd = indivEndInput.value ? indivEndInput.value.replace('T', ' ') : '未設定';
+      const indivSpare = indivSpareInput.value || 'なし';
+
+      // 入力フォームの表示切替
+      if (applyType === 'individual') {
+        individualFields.classList.remove('hidden');
+        comprehensiveDateField.classList.add('hidden');
+        prevPermitFields.classList.add('hidden');
+      } else if (applyType === 'renew' || applyType === 'modify') {
+        individualFields.classList.add('hidden');
+        comprehensiveDateField.classList.remove('hidden');
+        prevPermitFields.classList.remove('hidden');
+      } else {
+        individualFields.classList.add('hidden');
+        comprehensiveDateField.classList.remove('hidden');
+        prevPermitFields.classList.add('hidden');
+      }
+
+      // ステップ1 ガイド切り替え
+      if (applyType === 'renew') {
+        guideStep1Body.innerHTML = `
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>作成方法:</strong> DIPSトップ ＞「許可・承認申請」＞「<strong>過去の許可・承認情報を利用して申請</strong>」を選択。</p>
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>期間設定:</strong> 開始日 <strong>${startDateVal}</strong> 〜 終了日 <strong>${endDateVal}</strong>（1年間）</p>
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>飛行する場所:</strong> 「日本全国」にチェック</p>
+          <div class="p-2 bg-slate-50 border rounded text-[11px] text-slate-600">
+            <strong>【地図提出の要否】: 不要</strong><br>
+            ※日本全国を対象とした包括申請のため、個別地図の描画・ファイル提出は不要です。
+          </div>
+        `;
+      } else if (applyType === 'comprehensive_new') {
+        guideStep1Body.innerHTML = `
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>作成方法:</strong> DIPSトップ ＞「許可・承認申請」＞「<strong>新規申請</strong>」を選択。</p>
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>期間設定:</strong> 開始日 <strong>${startDateVal}</strong> 〜 終了日 <strong>${endDateVal}</strong>（1年間）</p>
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>飛行する場所:</strong> 「日本全国」にチェック</p>
+          <div class="p-2 bg-slate-50 border rounded text-[11px] text-slate-600">
+            <strong>【地図提出の要否】: 不要</strong><br>
+            ※日本全国を対象とした包括申請のため、個別地図の描画・ファイル提出は不要です。
+          </div>
+        `;
+      } else if (applyType === 'modify') {
+        guideStep1Body.innerHTML = `
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>作成方法:</strong> DIPSトップ ＞「申請状況一覧」＞ 該当の許可書から「<strong>変更申請</strong>」を選択。</p>
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>期間:</strong> 元の許可期間を継続して設定。</p>
+          <div class="p-2 bg-slate-50 border rounded text-[11px] text-slate-600">
+            <strong>【地図提出の要否】: 包括申請の場合は不要</strong>（個別申請の変更時は該当区画の更新が必要）
+          </div>
+        `;
+      } else {
+        guideStep1Body.innerHTML = `
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>申請の種類:</strong> 個別申請</p>
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>飛行日時:</strong> ${indivStart} 〜 ${indivEnd}（予備日：${indivSpare}）</p>
+          <p><i class="fa-solid fa-arrow-right text-blue-500 mr-1"></i> <strong>飛行場所:</strong> 個別指定（${location}）</p>
+          <div class="p-2 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-800">
+            <strong>【地図提出の要否】: 必須</strong><br>
+            ※DIPS画面の地図上で飛行範囲・飛行経路（ポリゴンまたは円）を直接描画するか、国土地理院等のKMLファイルをアップロードする必要があります。
+          </div>
+        `;
+      }
+
+      // ステップ2 理由文面
+      let s2 = '';
+      if (applyType === 'renew') {
+        const accidentText = (accidentStatus === 'none') 
+          ? 'なお、前回の許可取得期間中において航空法違反、事故および重大インシデントの発生はなく、安全な運用体制を継続している。'
+          : 'なお、前回の許可期間中に発生した事象については所定の是正および安全対策を完了しており、本申請においても再発防止基準を徹底する。';
+
+        s2 = `従前の包括的許可・承認（許可番号：${prevNum}）の有効期間満了に伴い、継続して業務（${purpose}等）に伴う無人航空機の運用を実施するため。\n` +
+             `年間を通じて全国各地での不定期な業務依頼や天候調整等へ即応する必要があるため、同一内容にて期間の更新（再申請）を申請する。\n` +
+             `（申請予定期間：${startDateVal} から 1年間）\n` +
+             accidentText;
+      } else if (applyType === 'modify') {
+        s2 = `従前の許可・承認（許可番号：${prevNum}）に対し、業務拡大および運用機材・操縦体制の変更に伴い内容の追加・変更を行うため。\n` +
+             `安全確保基準および飛行マニュアルの遵守方針は従前の基準を維持し、適切な管理下で飛行業務を実施する。`;
+      } else if (applyType === 'comprehensive_new') {
+        s2 = `業務目的（${purpose}等）に伴い、年間を通じて日本全国各地において無人航空機の飛行を行う必要があるため。\n` +
+             `気象条件や発注元からの突発的な依頼・日程変更等へ機動的に対応するため、包括的な許可・承認を申請する。\n` +
+             `（申請予定期間：${startDateVal} から 1年間）`;
+      } else {
+        s2 = `${location}における${purpose}業務の実施に伴い、無人航空機を飛行させる必要があるため。\n` +
+             `予定日時：${indivStart} 〜 ${indivEnd}（予備日：${indivSpare}まで）\n` +
+             `現地状況および業務進捗に応じた確実な作業遂行を目的として個別申請を行う。`;
+      }
+      textStep2.value = s2;
+
+      // ステップ3 安全確保体制文面（補助者・排他措置の反映）
+      const safeMeasures = [];
+      if (checkHelper.checked) {
+        safeMeasures.push('・補助者を配置し、常時飛行経路周辺および機体周囲の監視を行い、第三者の立ち入りを制限する。');
+      }
+      if (checkExclusion.checked) {
+        safeMeasures.push('・飛行経路下および周辺の離着陸場所等にパイロン（カラーコーン）、トラバー、立入禁止看板等を設置し、第三者が立ち入れないよう明瞭な排他区画（立入管理区画）を設定する。第三者が区画内に接近または侵入した場合は直ちに飛行を停止または待避させる。');
+      }
+      if (checkFailsafe.checked) {
+        safeMeasures.push('・フェールセーフ機能（通信途絶時の自動帰還機能、電波障害対策）が正常に作動することを確認して運用する。');
+      }
+      if (checkGuards.checked) {
+        safeMeasures.push('・機体には衝突時の衝撃を緩和するためのプロペラガード等の安全装備を装着する。');
+      }
+
+      let pilotRecordPrefix = (applyType === 'renew')
+        ? `・過去1年間の包括運用実績を踏まえ、十分な技量と経験（累積飛行実績：${hours}）を有する操縦者が関係法令および安全基準を遵守して操縦を行う。`
+        : `・十分な運用実績（${hours}の飛行実績）を有する操縦者が関係法令および安全基準を遵守して操縦を行う。`;
+
+      let s3 = `1. 操縦体制:\n` +
+               `${pilotRecordPrefix}\n\n` +
+               `2. 機体点検・運用基準:\n` +
+               `・飛行前および飛行後に必ず日常点検を実施し、異常が認められた場合は直ちに飛行を中止する。\n` +
+               `・突風、強風（風速${windLimit}以上）、降雨、降雪、その他悪天候時は飛行を行わない。\n\n` +
+               `3. 安全管理・立入管理措置:\n` +
+               (safeMeasures.length > 0 ? safeMeasures.join('\n') : '・所定の安全運行基準に従い十分な周囲確認を実施する。');
+      textStep3.value = s3;
+
+      // ステップ4 マニュアル推奨
+      if (checkHelper.checked) {
+        manualRecommendation.innerHTML = `<strong>推奨選択：航空局標準マニュアル②（場所を特定しない包括申請用）</strong><br>` +
+          `※補助者を適切に配置し、人・物件30m以内、DID、夜間、目視外飛行を実施する場合、標準マニュアル②をそのまま適用可能です。パイロン等の排他措置と併用することで、より確実な安全確保体制として認められます。`;
+      } else {
+        manualRecommendation.innerHTML = `<strong>注意：独自マニュアルの作成・提出が必要です</strong><br>` +
+          `※「補助者を配置しない目視外飛行」を行う場合、パイロン等による立入管理措置を行っていても航空局標準マニュアルの適用範囲外となるため、立入管理措置の運用詳細を定めた独自飛行マニュアルの作成・添付が必要です。`;
+      }
+
+      // ステップ5 緊急連絡
+      let s5 = `1. 緊急連絡窓口:\n` +
+               `連絡先：${contact}\n\n` +
+               `2. インシデント・事故発生時の措置:\n` +
+               `・直ちに飛行を停止し、負傷者の救護および危険の防止措置（119番通報・110番通報）を最優先で実施する。\n` +
+               `・所轄警察署および関係機関へ速やかに報告を行う。\n` +
+               `・DIPS 2.0の事故等報告機能を通じ、遅滞なく国土交通省航空局へ事故報告書を提出する。`;
+      textStep5.value = s5;
+    }
+
+    // イベントリスナー設定
+    [
+      ...applyTypeRadios, purposeSelect, checkDid, checkDistance,
+      checkNight, checkLineOfSight, checkHelper, checkExclusion, checkFailsafe,
+      checkGuards, windLimitInput, flightHoursInput, contactInput,
+      locationInput, startDateInput, indivStartInput, indivEndInput,
+      indivSpareInput, prevNumberInput, accidentStatusSelect
+    ].forEach(el => {
+      el.addEventListener('input', updateOutputs);
+      el.addEventListener('change', updateOutputs);
+    });
+
+    // コピーボタン処理
+    document.querySelectorAll('.btn-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        copyToClipboard(document.getElementById(targetId).value);
+      });
+    });
+
+    // 全項目コピー
+    document.getElementById('btn-copy-all').addEventListener('click', () => {
+      const applyType = document.querySelector('input[name="apply-type"]:checked').value;
+      const typeLabel = applyType === 'renew' ? '包括申請（更新・再申請）' : (applyType === 'modify' ? '変更申請' : (applyType === 'individual' ? '個別申請' : '新規包括申請'));
+      const allText = [
+        `=== DIPS 2.0 申請控え（${typeLabel}） ===`,
+        '',
+        '【ステップ1：申請概要・地図要否】',
+        guideStep1Body.innerText.trim(),
+        '',
+        '【ステップ2：飛行の目的・理由】',
+        textStep2.value,
+        '',
+        '【ステップ3：安全確保体制】',
+        textStep3.value,
+        '',
+        '【ステップ5：緊急連絡体制】',
+        textStep5.value
+      ].join('\n');
+      copyToClipboard(allText);
+    });
+
+    // 初期実行
+    updateOutputs();
+  </script>
+</body>
+</html>
